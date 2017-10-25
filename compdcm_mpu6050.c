@@ -335,9 +335,9 @@ ConfigureUART(void)
 int
 main(void)
 {
-    int_fast32_t i32IPart[16], i32FPart[16];
+    int_fast32_t i32IPart[9], i32FPart[9];
     uint_fast32_t ui32Idx, ui32CompDCMStarted;
-    float pfData[16];
+    float pfData[9];
     float *pfAccel, *pfGyro, *pfEulers, *pfQuaternion;
 
     //
@@ -347,8 +347,7 @@ main(void)
     //
     pfAccel = pfData;
     pfGyro = pfData + 3;
-    pfEulers = pfData + 9;
-    pfQuaternion = pfData + 12;
+    pfEulers = pfData + 6;
 
     //
     // Setup the system clock to run at 40 Mhz from PLL with crystal reference
@@ -584,18 +583,6 @@ main(void)
                                  pfEulers + 2);
 
             //
-            // Get Quaternions.
-            //
-            CompDCMComputeQuaternion(&g_sCompDCMInst, pfQuaternion);
-
-            //
-            // convert mag data to micro-tesla for better human interpretation.
-            //
-//            pfMag[0] *= 1e6;
-//            pfMag[1] *= 1e6;
-//            pfMag[2] *= 1e6;
-
-            //
             // Convert Eulers to degrees. 180/PI = 57.29...
             // Convert Yaw to 0 to 360 to approximate compass headings.
             //
@@ -612,7 +599,7 @@ main(void)
             // purpose of decomposing the float into a integer part and a
             // fraction (decimal) part.
             //
-            for(ui32Idx = 0; ui32Idx < 16; ui32Idx++)
+            for(ui32Idx = 0; ui32Idx < 9; ui32Idx++)
             {
                 //
                 // Conver float value to a integer truncating the decimal part.
@@ -656,27 +643,11 @@ main(void)
             UARTprintf("\033[7;63H%3d.%03d", i32IPart[5], i32FPart[5]);
 
             //
-            // Print the magnetic data in the table.
+            // Print the Eulers in the table.
             //
             UARTprintf("\033[9;17H%3d.%03d", i32IPart[6], i32FPart[6]);
             UARTprintf("\033[9;40H%3d.%03d", i32IPart[7], i32FPart[7]);
             UARTprintf("\033[9;63H%3d.%03d", i32IPart[8], i32FPart[8]);
-
-            //
-            // Print the Eulers in a table.
-            //
-            UARTprintf("\033[14;17H%3d.%03d", i32IPart[9], i32FPart[9]);
-            UARTprintf("\033[14;40H%3d.%03d", i32IPart[10], i32FPart[10]);
-            UARTprintf("\033[14;63H%3d.%03d", i32IPart[11], i32FPart[11]);
-
-            //
-            // Print the quaternions in a table format.
-            //
-            UARTprintf("\033[19;14H%3d.%03d", i32IPart[12], i32FPart[12]);
-            UARTprintf("\033[19;32H%3d.%03d", i32IPart[13], i32FPart[13]);
-            UARTprintf("\033[19;50H%3d.%03d", i32IPart[14], i32FPart[14]);
-            UARTprintf("\033[19;68H%3d.%03d", i32IPart[15], i32FPart[15]);
-
         }
     }
 }
