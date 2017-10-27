@@ -327,64 +327,8 @@ ConfigureUART(void)
     UARTStdioConfig(0, 115200, 16000000);
 }
 
-//*****************************************************************************
-//
-// Main application entry point.
-//
-//*****************************************************************************
-int
-main(void)
-{
-    int_fast32_t i32IPart[9], i32FPart[9];
-    uint_fast32_t ui32Idx, ui32CompDCMStarted;
-    float pfData[9];
-    float *pfAccel, *pfGyro, *pfEulers, *pfQuaternion;
-
-    //
-    // Initialize convenience pointers that clean up and clarify the code
-    // meaning. We want all the data in a single contiguous array so that
-    // we can make our pretty printing easier later.
-    //
-    pfAccel = pfData;
-    pfGyro = pfData + 3;
-    pfEulers = pfData + 6;
-
-    //
-    // Setup the system clock to run at 40 Mhz from PLL with crystal reference
-    //
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
-                       SYSCTL_OSC_MAIN);
-
-    //
-    // Enable port B used for motion interrupt.
-    //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-
-    //
-    // Initialize the UART.
-    //
-    ConfigureUART();
-
-    //
-    // Print the welcome message to the terminal.
-    //
-    UARTprintf("\033[2JMPU6050 Raw Example\n");
-
-    //
-    // Set the color to a purple approximation.
-    //
-    g_pui32Colors[RED] = 0x8000;
-    g_pui32Colors[BLUE] = 0x8000;
-    g_pui32Colors[GREEN] = 0x0000;
-
-    //
-    // Initialize RGB driver.
-    //
-    RGBInit(0);
-    RGBColorSet(g_pui32Colors);
-    RGBIntensitySet(0.5f);
-    RGBEnable();
-
+void
+InitMPU(void){
     //
     // The I2C3 peripheral must be enabled before use.
     //
@@ -488,6 +432,67 @@ main(void)
     // accel weight = .2, gyro weight = .8, mag weight = .2
     //
     CompDCMInit(&g_sCompDCMInst, 1.0f / 50.0f, 0.2f, 0.6f, 0.2f);
+}
+
+//*****************************************************************************
+//
+// Main application entry point.
+//
+//*****************************************************************************
+int
+main(void)
+{
+    int_fast32_t i32IPart[9], i32FPart[9];
+    uint_fast32_t ui32Idx, ui32CompDCMStarted;
+    float pfData[9];
+    float *pfAccel, *pfGyro, *pfEulers, *pfQuaternion;
+
+    //
+    // Initialize convenience pointers that clean up and clarify the code
+    // meaning. We want all the data in a single contiguous array so that
+    // we can make our pretty printing easier later.
+    //
+    pfAccel = pfData;
+    pfGyro = pfData + 3;
+    pfEulers = pfData + 6;
+
+    //
+    // Setup the system clock to run at 40 Mhz from PLL with crystal reference
+    //
+    ROM_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+                       SYSCTL_OSC_MAIN);
+
+    //
+    // Enable port B used for motion interrupt.
+    //
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+
+    //
+    // Initialize the UART.
+    //
+    ConfigureUART();
+
+    //
+    // Print the welcome message to the terminal.
+    //
+    UARTprintf("\033[2JMPU6050 Raw Example\n");
+
+    //
+    // Set the color to a purple approximation.
+    //
+    g_pui32Colors[RED] = 0x8000;
+    g_pui32Colors[BLUE] = 0x8000;
+    g_pui32Colors[GREEN] = 0x0000;
+
+    //
+    // Initialize RGB driver.
+    //
+    RGBInit(0);
+    RGBColorSet(g_pui32Colors);
+    RGBIntensitySet(0.5f);
+    RGBEnable();
+
+    InitMPU();
 
     UARTprintf("\033[2J\033[H");
     UARTprintf("MPU6050 9-Axis Simple Data Application Example\n\n");
