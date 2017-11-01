@@ -1,7 +1,7 @@
 #ifndef __sonar_h__
 #define __sonar_h__
 
-#include "Types.h"
+#include "types.h"
 
 void initSonar(void);
 bool triggerSonar(void);

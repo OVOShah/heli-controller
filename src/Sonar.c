@@ -2,8 +2,6 @@
 #include <stdbool.h>
 #include <math.h>
 
-#include "EEPROM.h"
-#include "IMU.h"
 #include "Sonar.h"
 #include "Time.h"
 
@@ -77,14 +75,14 @@ int16_t getSonarDistance(angle_t *angle) {
     static const uint8_t US_ROUNDTRIP_CM = 58; // Microseconds (uS) it takes sound to travel round-trip 1cm (2cm total). Calculated at room temperature
     newSonarDistance = false; // Set variable back to false
 
-    if (sonarDistanceDeciUs < 1150 || sonarDistanceDeciUs > 185000) // Datasheet says min is 115us and max is 18.5ms
-        return -1;
+    // if (sonarDistanceDeciUs < 1150 || sonarDistanceDeciUs > 185000) // Datasheet says min is 115us and max is 18.5ms
+    //     return -1;
 
-    if (fmaxf(fabsf(angle->axis.roll), fabsf(angle->axis.pitch)) > cfg.maxAngleInclinationDistSensor) // Return -1 if it is tilted more than the maximum tilt angle
-        return -1;
+    // if (fmaxf(fabsf(angle->axis.roll), fabsf(angle->axis.pitch)) > cfg.maxAngleInclinationDistSensor) // Return -1 if it is tilted more than the maximum tilt angle
+    //     return -1;
 
     int16_t distance = sonarDistanceDeciUs / US_ROUNDTRIP_CM; // The output will actually be in mm, as it is in deci-us
-    distance *= cosf(angle->axis.roll * DEG_TO_RAD) * cosf(angle->axis.pitch * DEG_TO_RAD); // Calculate adjacent side
+    // distance *= cosf(angle->axis.roll * DEG_TO_RAD) * cosf(angle->axis.pitch * DEG_TO_RAD); // Calculate adjacent side
 
     return distance;
 }

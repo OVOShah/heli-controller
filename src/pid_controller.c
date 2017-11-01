@@ -1,23 +1,39 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include "pid_controller.h"
 
-float error, previous_error;
-float lastZAccel = 0;
+float error, prevError;
 
-float Kp = 0;
+float Kp = 0.5;
+float Ki = 0.1;
 float Kd = 10;
+float stableHeight = 100;
 
-// Start with PD controller then tune + add integral 
-float LiftPID(float fZAccel){
-	error = -fZAccel;
+bool setHeight(float height){
+	if (height > 1000 || height < 10) return false;
+	stableHeight = height;
+	return true;
+}
+
+float liftPID(float curHeight, float dt){
+	error = stableHeight - curHeight;
+
+	// P-Term
 	float pTerm = Kp * error;
-	float dTerm = Kd * (fZAccel - lastZAccel);
+
+	// I-Term
+	static float iTerm = 0;
+	iTerm += Ki * error
+
+	// D-Term
+	float dTerm = Kd * (error - prevError) / dt;
+	//TODO: smoothing on derivative??
 	
-	lastZAccel = fZAccel;
+	prevError = error;
 
 	float PIDValue = pTerm - dTerm;
 
 	//TODO: Limit PID to maximum motor speed
 
-	return PIDValue;
+	return pTerm + iTerm + dTerm;
 }
