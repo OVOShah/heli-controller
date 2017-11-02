@@ -23,7 +23,7 @@ float liftPID(float curHeight, float dt){
 
 	// I-Term
 	static float iTerm = 0;
-	iTerm += Ki * error
+	iTerm += Ki * error;
 
 	// D-Term
 	float dTerm = Kd * (error - prevError) / dt;
@@ -31,9 +31,6 @@ float liftPID(float curHeight, float dt){
 	
 	prevError = error;
 
-	float PIDValue = pTerm - dTerm;
-
 	//TODO: Limit PID to maximum motor speed
-
 	return pTerm + iTerm + dTerm;
 }

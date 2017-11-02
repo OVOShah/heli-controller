@@ -7,6 +7,8 @@
 #include "driverlib/sysctl.h"
 #include "adxl3350.h"
 
+#define ACCEL_DESCR 0.08
+
 //
 // This array is used for storing the data read from the ADC FIFO. It
 // must be as large as the FIFO for the sequencer in use.  This example
@@ -14,6 +16,8 @@
 // was used with a deeper FIFO, then the array size must be changed.
 //
 uint32_t pui32ADC0Value[3];
+
+float k_voltage_filt = 0.001;
 
 void InitADC(void)
 {
@@ -76,6 +80,10 @@ void InitADC(void)
 
 acceleration_t GetAccel(void){
 
+    static float gX_voltage = 0;
+    static float gY_voltage = 0;
+    static float gZ_voltage = 0;
+
     //
     // Trigger the ADC conversion.
     //
@@ -99,13 +107,13 @@ acceleration_t GetAccel(void){
     ADCSequenceDataGet(ADC0_BASE, 2, pui32ADC0Value);
 
     float gX_voltage_raw  = (3.3 / 4096.0)*pui32ADC0Value[0];
-    float gX_voltage += k_voltage_filt*(gX_voltage_raw - gX_voltage);
+    gX_voltage += k_voltage_filt*(gX_voltage_raw - gX_voltage);
 
     float gY_voltage_raw = (3.3 / 4096.0)*pui32ADC0Value[1];
-    float gY_voltage += k_voltage_filt*(gY_voltage_raw - gY_voltage);
+    gY_voltage += k_voltage_filt*(gY_voltage_raw - gY_voltage);
 
     float gZ_voltage_raw = (3.3 / 4096.0)*pui32ADC0Value[2];
-    float gZ_voltage += k_voltage_filt*(gZ_voltage_raw - gZ_voltage);
+    gZ_voltage += k_voltage_filt*(gZ_voltage_raw - gZ_voltage);
 
     // Calculate acceleration from voltage
     float gX_acceleration = (gX_voltage -1.5)/0.3;
