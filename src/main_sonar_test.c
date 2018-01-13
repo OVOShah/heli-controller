@@ -39,9 +39,9 @@ int main(void)
 
           driveMotor(1, 1);
           delay(1000);
-          driveMotor(2, 2);
+          driveMotor(2, 16);
           delay(1000);
-          driveMotor(16, 16);
+          driveMotor(16, 1028);
           delay(1000);
 
     }

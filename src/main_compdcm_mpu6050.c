@@ -357,7 +357,7 @@ InitMPU(void){
     ROM_GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_2);
     GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_2);
     ROM_GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_FALLING_EDGE);
-    ROM_IntEnable(INT_GPIOB);
+//    ROM_IntEnable(INT_GPIOB);
 
     //
     // Keep only some parts of the systems running while in sleep mode.
@@ -367,7 +367,7 @@ InitMPU(void){
     // I2C3 is the I2C interface to the ISL29023
     //
     ROM_SysCtlPeripheralClockGating(true);
-    ROM_SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOB);
+//    ROM_SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOB);
     ROM_SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);
     ROM_SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_TIMER0);
     ROM_SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_TIMER1);
@@ -411,9 +411,31 @@ InitMPU(void){
     //
     MPU6050AppI2CWait(__FILE__, __LINE__);
 
+    // Missing from API
+    // Removes MPU from sleep mode
+    MPU6050ReadModifyWrite(&g_sMPU6050Inst, MPU6050_O_PWR_MGMT_1,
+            ~MPU6050_PWR_MGMT_1_DEVICE_RESET,
+            0x00, MPU6050AppCallback,
+            0);
+
     //
-    // Configure the data ready interrupt pin output of the MPU6050.
+    // Wait for transaction to complete
     //
+    MPU6050AppI2CWait(__FILE__, __LINE__);
+
+    MPU6050ReadModifyWrite(&g_sMPU6050Inst, MPU6050_O_PWR_MGMT_1,
+            ~MPU6050_PWR_MGMT_1_SLEEP,
+            0x00, MPU6050AppCallback,
+            0);
+
+    //
+    // Wait for transaction to complete
+    //
+    MPU6050AppI2CWait(__FILE__, __LINE__);
+
+    //
+//     Configure the data ready interrupt pin output of the MPU6050.
+
     g_sMPU6050Inst.pui8Data[0] = MPU6050_INT_PIN_CFG_INT_LEVEL |
                                     MPU6050_INT_PIN_CFG_INT_RD_CLEAR |
                                     MPU6050_INT_PIN_CFG_LATCH_INT_EN;
@@ -422,9 +444,9 @@ InitMPU(void){
                  g_sMPU6050Inst.pui8Data, 2, MPU6050AppCallback,
                  &g_sMPU6050Inst);
 
-    //
-    // Wait for transaction to complete
-    //
+
+//     Wait for transaction to complete
+
     MPU6050AppI2CWait(__FILE__, __LINE__);
 
     //
@@ -516,6 +538,8 @@ main(void)
 
     while(1)
     {
+
+        MPU6050DataRead(&g_sMPU6050Inst, MPU6050AppCallback, &g_sMPU6050Inst);
         //
         // Go to sleep mode while waiting for data ready.
         //
@@ -541,9 +565,9 @@ main(void)
         MPU6050DataGyroGetFloat(&g_sMPU6050Inst, pfGyro, pfGyro + 1,
                                 pfGyro + 2);
 
-        //
-        // Check if this is our first data ever.
-        //
+
+//         Check if this is our first data ever.
+
         if(ui32CompDCMStarted == 0)
         {
             //
