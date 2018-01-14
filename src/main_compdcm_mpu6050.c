@@ -41,6 +41,8 @@
 #include "sensorlib/mpu6050.h"
 #include "sensorlib/comp_dcm.h"
 #include "drivers/rgb.h"
+#include "pid_controller.h"
+#include "motor_driver.h"
 
 //*****************************************************************************
 //
@@ -125,7 +127,7 @@ volatile uint_fast8_t g_vui8DataFlag;
 // Global counter to control and slow down the rate of data to the terminal.
 //
 //*****************************************************************************
-#define PRINT_SKIP_COUNT        10
+#define PRINT_SKIP_COUNT        60
 
 uint32_t g_ui32PrintSkipCounter;
 
@@ -354,9 +356,9 @@ InitMPU(void){
     // Configure and Enable the GPIO interrupt. Used for INT signal from the
     // MPU6050
     //
-    ROM_GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_2);
-    GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_2);
-    ROM_GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_FALLING_EDGE);
+//    ROM_GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_2);
+//    GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_2);
+//    ROM_GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_2, GPIO_FALLING_EDGE);
 //    ROM_IntEnable(INT_GPIOB);
 
     //
@@ -464,10 +466,10 @@ InitMPU(void){
 int
 main(void)
 {
-    int_fast32_t i32IPart[9], i32FPart[9];
+    int_fast32_t i32IPart[16], i32FPart[16];
     uint_fast32_t ui32Idx, ui32CompDCMStarted;
-    float pfData[9];
-    float *pfAccel, *pfGyro, *pfEulers, *pfQuaternion;
+    float pfData[16];
+    float *pfAccel, *pfGyro, *pfMag, *pfEulers, *pfQuaternion;
 
     //
     // Initialize convenience pointers that clean up and clarify the code
@@ -476,7 +478,9 @@ main(void)
     //
     pfAccel = pfData;
     pfGyro = pfData + 3;
-    pfEulers = pfData + 6;
+    pfMag = pfData + 6;
+    pfEulers = pfData + 9;
+    pfQuaternion = pfData + 12;
 
     //
     // Setup the system clock to run at 40 Mhz from PLL with crystal reference
@@ -487,16 +491,13 @@ main(void)
     //
     // Enable port B used for motion interrupt.
     //
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+//    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
 
     //
     // Initialize the UART.
     //
     ConfigureUART();
 
-    //
-    // Print the welcome message to the terminal.
-    //
     UARTprintf("\033[2JMPU6050 Raw Example\n");
 
     //
@@ -515,19 +516,8 @@ main(void)
     RGBEnable();
 
     InitMPU();
-
-    UARTprintf("\033[2J\033[H");
-    UARTprintf("MPU6050 9-Axis Simple Data Application Example\n\n");
-    UARTprintf("\033[20GX\033[31G|\033[43GY\033[54G|\033[66GZ\n\n");
-    UARTprintf("Accel\033[8G|\033[31G|\033[54G|\n\n");
-    UARTprintf("Gyro\033[8G|\033[31G|\033[54G|\n\n");
-    UARTprintf("Mag\033[8G|\033[31G|\033[54G|\n\n");
-    UARTprintf("\n\033[20GRoll\033[31G|\033[43GPitch\033[54G|\033[66GYaw\n\n");
-    UARTprintf("Eulers\033[8G|\033[31G|\033[54G|\n\n");
-
-    UARTprintf("\n\033[17GQ1\033[26G|\033[35GQ2\033[44G|\033[53GQ3\033[62G|"
-               "\033[71GQ4\n\n");
-    UARTprintf("Q\033[8G|\033[26G|\033[44G|\033[62G|\n\n");
+    initPWM();
+    setPitch(0);
 
     //
     // Enable blinking indicates config finished successfully
@@ -575,6 +565,8 @@ main(void)
             // Perform the seeding of the DCM with the first data set.
             //
             ui32CompDCMStarted = 1;
+            CompDCMMagnetoUpdate(&g_sCompDCMInst, pfMag[0], pfMag[1],
+                                 pfMag[2]);
             CompDCMAccelUpdate(&g_sCompDCMInst, pfAccel[0], pfAccel[1],
                                pfAccel[2]);
             CompDCMGyroUpdate(&g_sCompDCMInst, pfGyro[0], pfGyro[1],
@@ -586,11 +578,27 @@ main(void)
             //
             // DCM Is already started.  Perform the incremental update.
             //
+            CompDCMMagnetoUpdate(&g_sCompDCMInst, pfMag[0], pfMag[1],
+                                 pfMag[2]);
             CompDCMAccelUpdate(&g_sCompDCMInst, pfAccel[0], pfAccel[1],
                                pfAccel[2]);
             CompDCMGyroUpdate(&g_sCompDCMInst, -pfGyro[0], -pfGyro[1],
                               -pfGyro[2]);
             CompDCMUpdate(&g_sCompDCMInst);
+
+            //
+            // Get Euler data. (Roll Pitch Yaw)
+            //
+            CompDCMComputeEulers(&g_sCompDCMInst, pfEulers, pfEulers + 1,
+                                 pfEulers + 2);
+
+            int32_t roll = (int32_t)((*(pfEulers+1))*30.0);
+            if (roll < 0){
+                driveMotor(-roll);
+            }
+            else{
+                driveMotor(roll);
+            }
         }
 
         //
@@ -608,8 +616,20 @@ main(void)
             //
             // Get Euler data. (Roll Pitch Yaw)
             //
-            CompDCMComputeEulers(&g_sCompDCMInst, pfEulers, pfEulers + 1,
-                                 pfEulers + 2);
+//            CompDCMComputeEulers(&g_sCompDCMInst, pfEulers, pfEulers + 1,
+//                                 pfEulers + 2);
+
+            //
+            // Get Quaternions.
+            //
+            CompDCMComputeQuaternion(&g_sCompDCMInst, pfQuaternion);
+
+            //
+            // convert mag data to micro-tesla for better human interpretation.
+            //
+//            pfMag[0] *= 1e6;
+//            pfMag[1] *= 1e6;
+//            pfMag[2] *= 1e6;
 
             //
             // Convert Eulers to degrees. 180/PI = 57.29...
@@ -628,7 +648,7 @@ main(void)
             // purpose of decomposing the float into a integer part and a
             // fraction (decimal) part.
             //
-            for(ui32Idx = 0; ui32Idx < 9; ui32Idx++)
+            for(ui32Idx = 9; ui32Idx < 11; ui32Idx++)
             {
                 //
                 // Conver float value to a integer truncating the decimal part.
@@ -660,23 +680,38 @@ main(void)
             //
             // Print the acceleration numbers in the table.
             //
-            UARTprintf("\033[5;17H%3d.%03d", i32IPart[0], i32FPart[0]);
-            UARTprintf("\033[5;40H%3d.%03d", i32IPart[1], i32FPart[1]);
-            UARTprintf("\033[5;63H%3d.%03d", i32IPart[2], i32FPart[2]);
+//            UARTprintf("\033[5;17H%3d.%03d", i32IPart[0], i32FPart[0]);
+//            UARTprintf("\033[5;40H%3d.%03d", i32IPart[1], i32FPart[1]);
+//            UARTprintf("\033[5;63H%3d.%03d", i32IPart[2], i32FPart[2]);
 
             //
             // Print the angular velocities in the table.
             //
-            UARTprintf("\033[7;17H%3d.%03d", i32IPart[3], i32FPart[3]);
-            UARTprintf("\033[7;40H%3d.%03d", i32IPart[4], i32FPart[4]);
-            UARTprintf("\033[7;63H%3d.%03d", i32IPart[5], i32FPart[5]);
+//            UARTprintf("\033[7;17H%3d.%03d", i32IPart[3], i32FPart[3]);
+//            UARTprintf("\033[7;40H%3d.%03d", i32IPart[4], i32FPart[4]);
+//            UARTprintf("\033[7;63H%3d.%03d", i32IPart[5], i32FPart[5]);
 
             //
-            // Print the Eulers in the table.
+            // Print the magnetic data in the table.
             //
-            UARTprintf("\033[9;17H%3d.%03d", i32IPart[6], i32FPart[6]);
-            UARTprintf("\033[9;40H%3d.%03d", i32IPart[7], i32FPart[7]);
-            UARTprintf("\033[9;63H%3d.%03d", i32IPart[8], i32FPart[8]);
+//            UARTprintf("\033[9;17H%3d.%03d", i32IPart[6], i32FPart[6]);
+//            UARTprintf("\033[9;40H%3d.%03d", i32IPart[7], i32FPart[7]);
+//            UARTprintf("\033[9;63H%3d.%03d", i32IPart[8], i32FPart[8]);
+
+            //
+            // Print the Eulers in a table.
+            //
+            UARTprintf("\033[14;17H%3d.%03d", i32IPart[9], i32FPart[9]);
+            UARTprintf("\033[14;40H%3d.%03d", i32IPart[10], i32FPart[10]);
+            UARTprintf("\033[14;63H%3d.%03d", i32IPart[11], i32FPart[11]);
+
+            //
+            // Print the quaternions in a table format.
+            //
+//            UARTprintf("\033[19;14H%3d.%03d", i32IPart[12], i32FPart[12]);
+//            UARTprintf("\033[19;32H%3d.%03d", i32IPart[13], i32FPart[13]);
+//            UARTprintf("\033[19;50H%3d.%03d", i32IPart[14], i32FPart[14]);
+//            UARTprintf("\033[19;68H%3d.%03d", i32IPart[15], i32FPart[15]);
         }
     }
 }

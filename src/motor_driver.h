@@ -10,7 +10,7 @@
 
 
 void initPWM(void);
-void driveMotor(uint32_t motor1, uint32_t motor2);
+void driveMotor(uint32_t motor1);
 
 
 #endif /* SRC_MOTOR_DRIVER_H_ */

@@ -21,7 +21,7 @@ int main(void)
      SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
      initUART();
-     initSonar();
+//     initSonar();
      initTime();
      initPWM();
      setHeight(300);
@@ -37,11 +37,11 @@ int main(void)
 //            if (distance > 0) UARTprintf("%d\n", distance);
 //        }
 
-          driveMotor(1, 1);
+          driveMotor(1);
           delay(1000);
-          driveMotor(2, 16);
+          driveMotor(2);
           delay(1000);
-          driveMotor(16, 1028);
+          driveMotor(16);
           delay(1000);
 
     }

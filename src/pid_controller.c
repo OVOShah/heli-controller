@@ -5,18 +5,18 @@
 float error, prevError;
 
 float Kp = 0.5;
-float Ki = 0.1;
+float Ki = 0.01;
 float Kd = 10;
-float stableHeight = 100;
+float stablePitch = 0;
 
-bool setHeight(float height){
-	if (height > 1000 || height < 10) return false;
-	stableHeight = height;
+bool setPitch(float pitch){
+	if (pitch > 1000 || pitch < 10) return false;
+	stablePitch = pitch;
 	return true;
 }
 
-float liftPID(float curHeight, float dt){
-	error = stableHeight - curHeight;
+float pitchPID(float curPitch, float dt){
+	error = stablePitch - curPitch;
 
 	// P-Term
 	float pTerm = Kp * error;
